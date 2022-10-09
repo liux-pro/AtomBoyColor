@@ -49,14 +49,17 @@ void lcd_digitalWrite(unsigned short int pin, unsigned char value)
 void lcd_spiWrite(unsigned char *buffer, size_t length)
 {
     esp_err_t ret;
-    spi_transaction_t t;
+    //esp32的spi发送以一个一个事务来组织。
+    spi_transaction_t t = {0};
     if (length == 0)
-        return;                                 // no need to send anything
-    memset(&t, 0, sizeof(t));                   // Zero out the transaction
-    t.length = length * 8;                      // Len is in bytes, transaction length is in bits.
-    t.tx_buffer = buffer;                       // Data
-    ret = spi_device_polling_transmit(spi, &t); // Transmit!
-    assert(ret == ESP_OK);                      // Should have had no issues.
+        return;            // no need to send anything
+    t.length = length * 8; // Len is in bytes, transaction length is in bits.
+    t.tx_buffer = buffer;  // Data
+    // ret = spi_device_polling_transmit(spi, &t); // 这样是同步发送
+    //放入队列
+    ret = spi_device_queue_trans(spi, &t, portMAX_DELAY); // Transmit!
+
+    assert(ret == ESP_OK); // Should have had no issues.
 }
 /* ################## END - HAVE TO BE IMPLEMENTED - END #################### */
 
@@ -69,13 +72,13 @@ void task1(void *pvParam)
                                .sclk_io_num = PIN_NUM_CLK,
                                .quadwp_io_num = -1, // unused
                                .quadhd_io_num = -1, // unused
-                               .max_transfer_sz = LCD_WIDTH * LCD_HEIGHT * 2 + 1024};
+                               .max_transfer_sz = LCD_WIDTH * LCD_HEIGHT * 2 + 1024};  // 系统会检查每个spi事务发送的大小，超过这个会抛异常
 
     spi_device_interface_config_t devcfg = {
         .clock_speed_hz = 60 * 1000 * 1000, // Clock out at 10 MHz
         .mode = 0,                          // SPI mode 0
         .spics_io_num = PIN_NUM_CS,         // CS pin
-        .queue_size = 7,                    // We want to be able to queue 7 transactions at a time
+        .queue_size = 7,                    // We want to be able to queue 7 transactions at a time 
     };
 
     // Initialize the SPI bus
@@ -179,25 +182,37 @@ void task1(void *pvParam)
                 //   r->b    g->r    b->g
             }
 
-            lcd_framebuffer_send(buf, sizeof(buf), 2048);
+            lcd_framebuffer_send(buf, sizeof(buf), INT_MAX);
             flag = !flag;
             vTaskDelay(16 / portTICK_PERIOD_MS);
         }
     }
 }
 
+void status_task(void *param)
+{
+    char *pbuffer = (char *)malloc(2048);
+    memset(pbuffer, 0x0, 2048);
+    while (1)
+    {
+        printf("-------------------- heap:%u --------------------------\r\n", esp_get_free_heap_size());
+        vTaskList(pbuffer);
+        printf("%s", pbuffer);
+        printf("----------------------------------------------\r\n");
+        vTaskDelay(3000 / portTICK_RATE_MS);
+    }
+    free(pbuffer);
+}
+
 void app_main(void)
 {
     TaskHandle_t taskHandle;
 
-    xTaskCreate(task1, "TASK1", 80 * 1024, NULL, 1, &taskHandle);
+    xTaskCreate(task1, "TASK1", 50 * 1024, NULL, 1, &taskHandle);
+    xTaskCreate(status_task, "status_task", 4 * 1024, NULL, 5, NULL);
 
     while (1)
     {
-
-        UBaseType_t rbgTaski = uxTaskGetStackHighWaterMark(taskHandle);
-        printf("rbgTaski = %d\n", rbgTaski);
-
         vTaskDelay(3000 / portTICK_PERIOD_MS);
     }
 }
