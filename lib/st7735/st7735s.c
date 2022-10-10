@@ -58,7 +58,10 @@ lcd_ptr_t lcd_createSettings(
     unsigned short int pin_communicationMode,
     signed   short int pin_reset
 ) {
-    lcd_ptr_t settings = malloc(sizeof(struct lcd_t));
+    // 移除动态内存申请
+    // lcd_ptr_t settings = malloc(sizeof(struct lcd_t));
+    static lcd_t new_lcd_t = {0};
+    lcd_ptr_t settings = &new_lcd_t;
 
     /* if out of RAM memory */
     if(settings == NULL) {
