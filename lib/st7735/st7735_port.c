@@ -27,9 +27,27 @@
 #define PIN_NUM_DC 8
 #define PIN_NUM_RST 10
 
+#define SPI_TRANSACTION_POOL_SIZE 20
+
 spi_device_handle_t spi;
 // 显存
 unsigned char buf[LCD_WIDTH * LCD_HEIGHT * 2] = {0};
+
+//池化spi_transaction
+// spi快速发送是基于spi_transaction的
+spi_transaction_t spi_transaction_pool[SPI_TRANSACTION_POOL_SIZE] = {0};
+
+spi_transaction_t get_spi_transaction()
+{
+    static uint8_t i = 0;
+    i++;
+    if (i > SPI_TRANSACTION_POOL_SIZE)
+    {
+        i = 0;
+    }
+    memset(&spi_transaction_pool[i], 0, sizeof(spi_transaction_t)); // Zero out the transaction
+    return spi_transaction_pool[i];
+}
 
 //这三个方法被st7735的通用驱动（https://github.com/michal037/driver-ST7735S）以extern的方式引用，事实上，驱动只需要这三个函数
 /* ######################## HAVE TO BE IMPLEMENTED ########################## */
@@ -73,16 +91,17 @@ void lcd_spiWrite(unsigned char *buffer, size_t length)
  * mode for higher speed. The overhead of interrupt transactions is more than
  * just waiting for the transaction to complete.
  */
-void st7735_cmd(const uint8_t * cmd)
+void st7735_cmd(const uint8_t cmd)
 {
     esp_err_t ret;
-    spi_transaction_t t;
-    memset(&t, 0, sizeof(t));                             // Zero out the transaction
-    t.length = 8;                                         // Command is 8 bits
-    t.tx_buffer = cmd;                                   // The data is the cmd itself
-    t.user = (void *)0;                                   // D/C needs to be set to 0
+    spi_transaction_t t = get_spi_transaction();
+    t.length = 8;       // Command is 8 bits
+    t.tx_data[0] = cmd; // The data is the cmd itself
+    t.flags = SPI_TRANS_USE_TXDATA;
+    t.user = (void *)0; // D/C needs to be set to 0
+    // ret = spi_device_queue_trans(spi, &t,portMAX_DELAY); // Transmit!
     ret = spi_device_transmit(spi, &t); // Transmit!
-    assert(ret == ESP_OK);                                // Should have had no issues.
+    assert(ret == ESP_OK);              // Should have had no issues.
 }
 
 /* Send data to the LCD. Uses spi_device_polling_transmit, which waits until the
@@ -95,16 +114,28 @@ void st7735_cmd(const uint8_t * cmd)
 void st7735_data(const uint8_t *data, int len)
 {
     esp_err_t ret;
-    spi_transaction_t t;
+    spi_transaction_t t = get_spi_transaction();
     if (len == 0)
-        return;                                           // no need to send anything
-    memset(&t, 0, sizeof(t));                             // Zero out the transaction
-    t.length = len * 8;                                   // Len is in bytes, transaction length is in bits.
-    t.tx_buffer = data;                                   // Data
-    t.user = (void *)1;                                   // D/C needs to be set to 1
+        return;                         // no need to send anything
+    t.length = len * 8;                 // Len is in bytes, transaction length is in bits.
+    t.tx_buffer = data;                 // Data
+    t.user = (void *)1;                 // D/C needs to be set to 1
+    // ret = spi_device_queue_trans(spi, &t,portMAX_DELAY); // Transmit!
     ret = spi_device_transmit(spi, &t); // Transmit!
-    assert(ret == ESP_OK);                                // Should have had no issues.
+    assert(ret == ESP_OK);              // Should have had no issues.
 }
+
+// void lcd_wait_busy()
+// {
+//     spi_transaction_t *rtrans;
+
+//     /* 查询并阻塞等待所有传输结束 */
+//     for (int i = 0; i < SPI_TRANSACTION_POOL_SIZE; i++)
+//     {
+//         ESP_ERROR_CHECK(
+//             spi_device_get_trans_result(spi, &rtrans, 1));
+//     }
+// }
 
 // This function is called (in irq context!) just before a transmission starts. It will
 // set the D/C line to the value indicated in the user field.
@@ -131,10 +162,10 @@ static void lcd_spi_init()
                                .max_transfer_sz = LCD_WIDTH * LCD_HEIGHT * 2 + 1024}; // 系统会检查每个spi事务发送的大小，超过这个会抛异常
 
     spi_device_interface_config_t devcfg = {
-        .clock_speed_hz = 8 * 1000 * 1000, // Clock out at 10 MHz
-        .mode = 0,                         // SPI mode 0
-        .spics_io_num = PIN_NUM_CS,        // CS pin
-        .queue_size = 20,                   // We want to be able to queue 7 transactions at a time
+        .clock_speed_hz = SPI_MASTER_FREQ_40M,      // Clock out at 10 MHz
+        .mode = 0,                               // SPI mode 0
+        .spics_io_num = PIN_NUM_CS,              // CS pin
+        .queue_size = SPI_TRANSACTION_POOL_SIZE, // We want to be able to queue 7 transactions at a time
         .pre_cb = lcd_spi_pre_transfer_callback};
 
     // Initialize the SPI bus
@@ -222,7 +253,7 @@ static void lcd_setWindowPosition_fast(
     buffer1[1] = column_start & 0x00FF;                  /* LSB */
     buffer1[2] = (column_end >> 8) & 0x00FF; /* MSB */   /* =0 for ST7735S */
     buffer1[3] = column_end & 0x00FF;                    /* LSB */
-    st7735_cmd(&LCD_CMD_CASET);
+    st7735_cmd(LCD_CMD_CASET);
     st7735_data(buffer1, 4);
 
     /* write row address; requires 4 bytes of the buffer */
@@ -230,7 +261,7 @@ static void lcd_setWindowPosition_fast(
     buffer2[1] = row_start & 0x00FF;                  /* LSB */
     buffer2[2] = (row_end >> 8) & 0x00FF; /* MSB */   /* =0 for ST7735S */
     buffer2[3] = row_end & 0x00FF;                    /* LSB */
-    st7735_cmd(&LCD_CMD_RASET);
+    st7735_cmd(LCD_CMD_RASET);
     st7735_data(buffer2, 4);
 }
 
@@ -271,11 +302,11 @@ void lcd_fast_refresh()
     lcd_setWindowPosition_fast(0, 0, LCD_WIDTH - 1, LCD_HEIGHT - 1);
     /* activate memory write */
     static uint8_t LCD_CMD_RAMWR = 0x2C; /* Memory Write (pdf v1.4 p132) */
-    st7735_cmd(&LCD_CMD_RAMWR);
+    st7735_cmd(LCD_CMD_RAMWR);
     //第三个参数是每次最大发送的大小，也就是如果总数据量大，会自动分包。
     //不知道为什么调大后就没法用了？
     //同样的代码封装在一个函数里也没法用，必须调小后才能用。
     //难道是因为freertos的调度，导致大包的发送过程被中断了？
-    st7735_data(buf, LCD_WIDTH * LCD_HEIGHT * 2);
-    // lcd_framebuffer_send_fast(buf, LCD_WIDTH * LCD_HEIGHT * 2, 8000);
+    // st7735_data(buf, LCD_WIDTH * LCD_HEIGHT * 2);
+    lcd_framebuffer_send_fast(buf, LCD_WIDTH * LCD_HEIGHT * 2, SPI_MAX_DMA_LEN);
 }

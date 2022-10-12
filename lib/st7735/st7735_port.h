@@ -13,3 +13,4 @@ uint8_t * lcd_get_buffer();
 void lcd_fast_init();
 void lcd_refresh();
 void lcd_fast_refresh();
+void lcd_wait_busy();
