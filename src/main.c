@@ -11,7 +11,7 @@
 #include "st7735_port.h"
 
 static const char *MAIN_LOG = "MAIN_LOG";
-extern uint16_t arr[];
+extern unsigned char pic[];
 
 void task1(void *pvParam)
 {
@@ -25,12 +25,13 @@ void task1(void *pvParam)
 
             uint8_t *buf = lcd_get_buffer();
 
-            for (size_t i = 0; i < LCD_WIDTH * LCD_HEIGHT; i++)
-            {
-                // ((uint16_t *)(buf))[i] = arr[i];
-                buf[i * 2] = ((uint8_t *)arr)[i * 2 + 1];
-                buf[i * 2 + 1] = ((uint8_t *)arr)[i * 2];
-            }
+            // for (size_t i = 0; i < LCD_WIDTH * LCD_HEIGHT * 2; i++)
+            // {
+            //     // ((uint16_t *)(buf))[i] = arr[i];
+            //     buf[i] = pic[i];
+            // }
+            memcpy(buf,pic,LCD_WIDTH * LCD_HEIGHT * 2);
+
             lcd_fast_refresh();
         }
     }
