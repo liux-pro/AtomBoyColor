@@ -176,6 +176,8 @@ static void lcd_spi_init()
     ESP_ERROR_CHECK(ret);
 
     // 初始化gpio
+    gpio_reset_pin(PIN_NUM_DC);
+    gpio_reset_pin(PIN_NUM_RST);
     gpio_set_direction(PIN_NUM_DC, GPIO_MODE_OUTPUT);
     gpio_set_direction(PIN_NUM_RST, GPIO_MODE_OUTPUT);
 }
