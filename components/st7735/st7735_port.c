@@ -24,7 +24,7 @@
 #define PIN_NUM_CS 7
 
 #define PIN_NUM_BL 11
-#define PIN_NUM_DC 8
+#define PIN_NUM_DC 6
 #define PIN_NUM_RST 10
 
 #define SPI_TRANSACTION_POOL_SIZE 20

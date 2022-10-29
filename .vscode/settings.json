@@ -1,8 +1,0 @@
-{
-    "files.associations": {
-        "st7735_port.h": "c",
-        "*.ipp": "c",
-        "esp_log.h": "c"
-    },
-    "commentTranslate.source": "Google"
-}
