@@ -1,0 +1,1 @@
+idf.py monitor -p COM11
