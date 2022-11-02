@@ -1,3 +1,4 @@
+#include <sys/cdefs.h>
 #include <sys/select.h>
 #include <sys/cdefs.h>
 #include <stdio.h>
@@ -16,7 +17,7 @@
 static const char *MAIN_LOG = "MAIN_LOG";
 extern unsigned char pic[];
 
-//_Noreturn void task1(void *pvParam)
+//_Noreturn void taskInfoNES(void *pvParam)
 //{
 //
 //
@@ -31,7 +32,7 @@ extern unsigned char pic[];
 //    }
 //}
 
-_Noreturn void infoNES_task(void *param){
+_Noreturn void taskLCD(void *param){
     InfoNES_Load(NULL);
     InfoNES_Init();
     TFT_t dev;
@@ -50,7 +51,7 @@ _Noreturn void infoNES_task(void *param){
     }
 }
 
-_Noreturn void status_task(void *param)
+_Noreturn void taskSystemMonitor(void *param)
 {
     uint8_t CPU_RunInfo[2048]; //保存任务运行时间信息
 
@@ -76,13 +77,13 @@ _Noreturn void status_task(void *param)
     }
 }
 
-void app_main(void)
+_Noreturn void app_main(void)
 {
     TaskHandle_t taskHandle;
 
-//    xTaskCreate(task1, "TASK1", 5 * 1024, NULL, 1, &taskHandle);
-    xTaskCreate(status_task, "status_task", 4 * 1024, NULL, 5, NULL);
-    xTaskCreate(infoNES_task, "infoNES_task", 4 * 1024, NULL, 5, NULL);
+//    xTaskCreate(taskInfoNES, "taskInfoNES", 5 * 1024, NULL, 1, &taskHandle);
+    xTaskCreate(taskSystemMonitor, "taskSystemMonitor", 4 * 1024, NULL, 5, NULL);
+    xTaskCreate(taskLCD, "taskLCD", 4 * 1024, NULL, 5, NULL);
 
     while (1)
     {
