@@ -1,6 +1,6 @@
 # 检测代码能否正常编译
 
-name: BuildTest
+name: Build
 
 on:
   push:
@@ -15,7 +15,7 @@ jobs:
       - name: build artifact
         run: docker run --rm -v $PWD:/project -w /project espressif/idf:v4.4.2 bash -c "idf.py build && cd build && esptool.py --chip esp32c3 merge_bin -o esp32c3.bin @flash_args"
       - name: Upload Artifact
-        uses: actions/upload-artifact@v2.2.1
+        uses: actions/upload-artifact@v3
         with:
           name: esp32c3.bin
           path: ./build/esp32c3.bin
