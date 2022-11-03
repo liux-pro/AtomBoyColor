@@ -1,1 +1,1 @@
-idf.py flash monitor -p COM11
+idf.py build flash monitor -p COM11

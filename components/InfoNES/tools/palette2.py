@@ -32,6 +32,7 @@ for i in range(size):
     g = rgb888[i*3+1]
     b = rgb888[i*3+2]
     result = r >> 3 << 11 | g >> 2 << 5 | b >> 3
+    result = ((result & 0xff) << 8) | ((result & 0xff00) >> 8)
     result_list.append(str(hex(result)))
 print("{" + ",".join(result_list) + "};")
 
