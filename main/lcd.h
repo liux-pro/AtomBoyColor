@@ -14,8 +14,8 @@
 #define LCD_HOST  SPI2_HOST
 
 #define ST7789_LCD_BK_LIGHT_ON_LEVEL  1
-#define ST7789_PIN_NUM_SCLK           18
-#define ST7789_PIN_NUM_MOSI           17
+#define ST7789_PIN_NUM_SCLK           12
+#define ST7789_PIN_NUM_MOSI           11
 #define ST7789_PIN_NUM_MISO           (-1)
 #define ST7789_PIN_NUM_LCD_DC         15
 #define ST7789_PIN_NUM_LCD_RST        16

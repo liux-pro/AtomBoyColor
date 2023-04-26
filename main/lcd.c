@@ -35,7 +35,7 @@ esp_err_t init_lcd() {
     esp_lcd_panel_io_spi_config_t io_config = {
             .dc_gpio_num = ST7789_PIN_NUM_LCD_DC,
             .cs_gpio_num = ST7789_PIN_NUM_LCD_CS,
-            .pclk_hz = SPI_MASTER_FREQ_40M,
+            .pclk_hz = SPI_MASTER_FREQ_80M,
             .lcd_cmd_bits = 8,
             .lcd_param_bits = 8,
             .spi_mode = 2,
