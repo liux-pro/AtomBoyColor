@@ -19,6 +19,7 @@
 
 #define MAIN_LOG_TAG "GameLite:main"
 uint16_t frameBuffer[240 * 240];
+
 extern DWORD dwPad1;
 
 #define PAD_KEY_A       0
@@ -36,6 +37,10 @@ void setBit(uint32_t *data, uint8_t location, bool x) {
 }
 
 timeProbe_t fps;
+TaskHandle_t handle_taskLCD;
+TaskHandle_t handle_taskFlush;
+
+WORD *currentWorkFrame;
 
 _Noreturn void taskLCD(void *param) {
     InfoNES_Load(NULL);
@@ -43,7 +48,6 @@ _Noreturn void taskLCD(void *param) {
 //    FrameSkip++;
 
     while (1) {
-        timeProbe_start(&fps);
         setBit(&dwPad1, PAD_KEY_A, !gpio_get_level(GPIO_NUM_1));
         setBit(&dwPad1, PAD_KEY_B, !gpio_get_level(GPIO_NUM_2));
         setBit(&dwPad1, PAD_KEY_SELECT, !gpio_get_level(GPIO_NUM_3));
@@ -53,14 +57,9 @@ _Noreturn void taskLCD(void *param) {
         setBit(&dwPad1, PAD_KEY_LEFT, !gpio_get_level(GPIO_NUM_7));
         setBit(&dwPad1, PAD_KEY_RIGHT, !gpio_get_level(GPIO_NUM_8));
         InfoNES_Cycle();
-        for (int y = 0; y < LCD_HEIGHT; ++y) {
-            for (int x = 0; x < LCD_WIDTH; ++x) {
-                frameBuffer[x + y * (LCD_WIDTH)] = WorkFrame[x + y * (NES_DISP_WIDTH) + 8];
-            }
-        }
-        esp_lcd_panel_draw_bitmap(lcd_panel_handle, 0, 0, LCD_WIDTH, LCD_HEIGHT, frameBuffer);
-        ESP_LOGI(MAIN_LOG_TAG, "fps: %f", 1000 / (timeProbe_stop(&fps) / 1000.0));
+        currentWorkFrame = DoubleFrame[WorkFrameIdx];
 
+        xTaskNotifyGive(handle_taskFlush);
     }
 }
 
@@ -70,6 +69,23 @@ void setInput(gpio_num_t gpio_num) {
     gpio_set_direction(gpio_num, GPIO_MODE_INPUT);
 }
 
+void taskFlush(void *parm) {
+    uint8_t fps_count=0;
+    while (1) {
+        timeProbe_start(&fps);
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        WORD *localWorkFrame = currentWorkFrame;
+        for (int y = 0; y < LCD_HEIGHT; ++y) {
+            for (int x = 0; x < LCD_WIDTH; ++x) {
+                frameBuffer[x + y * (LCD_WIDTH)] = localWorkFrame[x + y * (NES_DISP_WIDTH) + 8];
+            }
+        }
+        esp_lcd_panel_draw_bitmap(lcd_panel_handle, 0, 0, LCD_WIDTH, LCD_HEIGHT, frameBuffer);
+
+        ESP_LOGI(MAIN_LOG_TAG, "fps: %f", 1000 / (timeProbe_stop(&fps) / 1000.0));
+    }
+
+}
 
 void app_main(void) {
     startTaskMonitor(10000);
@@ -87,7 +103,6 @@ void app_main(void) {
     setInput(GPIO_NUM_7);
     setInput(GPIO_NUM_8);
 
-
-    xTaskCreate(taskLCD, "taskLCD", 4 * 1024, NULL, 5, NULL);
-
+    xTaskCreatePinnedToCore(taskFlush, "taskFlush", 4 * 1024, NULL, 5, &handle_taskFlush, 1);
+    xTaskCreatePinnedToCore(taskLCD, "taskLCD", 4 * 1024, NULL, 5, &handle_taskLCD, 0);
 }

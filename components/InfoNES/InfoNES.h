@@ -190,7 +190,7 @@ extern WORD FrameSkip;
 extern WORD FrameCnt;
 extern WORD FrameWait;
 
-#if 0
+#if 1
 extern WORD DoubleFrame[ 2 ][ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
 extern WORD *WorkFrame;
 extern WORD WorkFrameIdx;

@@ -157,10 +157,10 @@ WORD FrameSkip;
 WORD FrameCnt;
 
 /* Display Buffer */
-#if 0
-WORD DoubleFrame[ 2 ][ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
+#if 1
+EXT_RAM_BSS_ATTR WORD DoubleFrame[ 2 ][ NES_DISP_WIDTH * NES_DISP_HEIGHT ]={0};
 WORD *WorkFrame;
-WORD WorkFrameIdx;
+WORD WorkFrameIdx=0;
 #else
 EXT_RAM_BSS_ATTR WORD WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
 #endif
@@ -396,7 +396,7 @@ int InfoNES_Reset()
   FrameSkip = 0;
   FrameCnt = 0;
 
-#if 0
+#if 1
   // Reset work frame
   WorkFrame = DoubleFrame[ 0 ];
   WorkFrameIdx = 0;
@@ -723,7 +723,7 @@ int InfoNES_HSync()
         frame_ready= true;
         InfoNES_LoadFrame();
         
-#if 0
+#if 1
         // Switching of the double buffer
         WorkFrameIdx = 1 - WorkFrameIdx;
         WorkFrame = DoubleFrame[ WorkFrameIdx ];
