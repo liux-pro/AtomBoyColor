@@ -71,8 +71,14 @@ void setInput(gpio_num_t gpio_num) {
 
 void taskFlush(void *parm) {
     uint8_t fps_count=0;
+    timeProbe_start(&fps);
+
     while (1) {
-        timeProbe_start(&fps);
+        fps_count++;
+        if (fps_count==0){
+            ESP_LOGI(MAIN_LOG_TAG, "fps: %f", 256.0f * 1000.0f / (timeProbe_stop(&fps) / 1000.0));
+            timeProbe_start(&fps);
+        }
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         WORD *localWorkFrame = currentWorkFrame;
         for (int y = 0; y < LCD_HEIGHT; ++y) {
@@ -82,7 +88,6 @@ void taskFlush(void *parm) {
         }
         esp_lcd_panel_draw_bitmap(lcd_panel_handle, 0, 0, LCD_WIDTH, LCD_HEIGHT, frameBuffer);
 
-        ESP_LOGI(MAIN_LOG_TAG, "fps: %f", 1000 / (timeProbe_stop(&fps) / 1000.0));
     }
 
 }
