@@ -41,6 +41,7 @@
 #include "InfoNES_pAPU.h"
 #include "K6502.h"
 #include "stdbool.h"
+#include "esp_attr.h"
 //标记生成完成一帧，退出循环
 bool frame_ready = false;
 /*-------------------------------------------------------------------*/
@@ -161,7 +162,7 @@ WORD DoubleFrame[ 2 ][ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
 WORD *WorkFrame;
 WORD WorkFrameIdx;
 #else
-WORD WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
+EXT_RAM_BSS_ATTR WORD WorkFrame[ NES_DISP_WIDTH * NES_DISP_HEIGHT ];
 #endif
 
 /* Character Buffer */

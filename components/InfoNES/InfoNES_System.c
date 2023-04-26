@@ -1,3 +1,4 @@
+#include <esp_log.h>
 #include "InfoNES_System.h"
 #include "InfoNES.h"
 #include "string.h"
@@ -143,6 +144,7 @@ void InfoNES_SoundClose() {
 
 /* Sound Output 5 Waves - 2 Pulse, 1 Triangle, 1 Noise, 1 DPCM */
 void InfoNES_SoundOutput(int samples, BYTE *wave1, BYTE *wave2, BYTE *wave3, BYTE *wave4, BYTE *wave5) {
+    ESP_LOGI("sound", "fps: %d", samples);
 }
 
 /* Print system message */

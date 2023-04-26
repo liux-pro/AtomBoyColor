@@ -14,12 +14,13 @@
 #include "K6502_rw.h"
 #include "InfoNES_System.h"
 #include "InfoNES_pAPU.h"
+#include "esp_attr.h"
 
 /*-------------------------------------------------------------------*/
 /*   APU Event resources                                             */
 /*-------------------------------------------------------------------*/
 
-struct ApuEvent_t ApuEventQueue[ APU_EVENT_MAX ];
+EXT_RAM_BSS_ATTR struct ApuEvent_t ApuEventQueue[ APU_EVENT_MAX ];
 int  cur_event;
 WORD entertime;
 
