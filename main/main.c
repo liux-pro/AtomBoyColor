@@ -5,6 +5,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <esp_task_wdt.h>
+#include <nvs_flash.h>
+#include <esp_now.h>
+#include <esp_netif.h>
+#include <esp_event.h>
+#include <esp_wifi.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -21,20 +26,11 @@
 uint16_t frameBuffer[240 * 240];
 
 extern DWORD dwPad1;
+extern DWORD dwPad2;
 
-#define PAD_KEY_A       0
-#define PAD_KEY_B       1
-#define PAD_KEY_SELECT  2
-#define PAD_KEY_START   3
-#define PAD_KEY_UP      4
-#define PAD_KEY_DOWN    5
-#define PAD_KEY_LEFT    6
-#define PAD_KEY_RIGHT   7
-
-void setBit(uint32_t *data, uint8_t location, bool x) {
-    *data &= ~(1 << location);  // Clear the bit at the specified location
-    *data |= (x << location);   // Set the bit to x at the specified location
-}
+#define ESPNOW_WIFI_MODE WIFI_MODE_STA
+#define ESPNOW_WIFI_IF  ESP_IF_WIFI_STA
+#define CONFIG_ESPNOW_CHANNEL  10
 
 timeProbe_t fps;
 TaskHandle_t handle_taskLCD;
@@ -48,14 +44,6 @@ _Noreturn void taskLCD(void *param) {
 //    FrameSkip++;
 
     while (1) {
-        setBit(&dwPad1, PAD_KEY_A, !gpio_get_level(GPIO_NUM_1));
-        setBit(&dwPad1, PAD_KEY_B, !gpio_get_level(GPIO_NUM_2));
-        setBit(&dwPad1, PAD_KEY_SELECT, !gpio_get_level(GPIO_NUM_3));
-        setBit(&dwPad1, PAD_KEY_START, !gpio_get_level(GPIO_NUM_4));
-        setBit(&dwPad1, PAD_KEY_UP, !gpio_get_level(GPIO_NUM_5));
-        setBit(&dwPad1, PAD_KEY_DOWN, !gpio_get_level(GPIO_NUM_6));
-        setBit(&dwPad1, PAD_KEY_LEFT, !gpio_get_level(GPIO_NUM_7));
-        setBit(&dwPad1, PAD_KEY_RIGHT, !gpio_get_level(GPIO_NUM_8));
         InfoNES_Cycle();
         currentWorkFrame = DoubleFrame[WorkFrameIdx];
 
@@ -91,10 +79,42 @@ void taskFlush(void *parm) {
     }
 
 }
+static void example_espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+    dwPad1=*((uint8_t *)(data)+0);
+}
 
+
+static esp_err_t example_espnow_init(void) {
+    /* Initialize ESPNOW and register sending and receiving callback function. */
+    ESP_ERROR_CHECK(esp_now_init());
+    ESP_ERROR_CHECK(esp_now_register_recv_cb(example_espnow_recv_cb));
+    return ESP_OK;
+}
+static void example_wifi_init(void) {
+    ESP_ERROR_CHECK(esp_netif_init());
+    ESP_ERROR_CHECK(esp_event_loop_create_default());
+    wifi_init_config_t cfg = WIFI_INIT_CONFIG_DEFAULT();
+    ESP_ERROR_CHECK(esp_wifi_init(&cfg));
+    ESP_ERROR_CHECK(esp_wifi_set_storage(WIFI_STORAGE_RAM));
+    ESP_ERROR_CHECK(esp_wifi_set_mode(ESPNOW_WIFI_MODE));
+    ESP_ERROR_CHECK(esp_wifi_start());
+    ESP_ERROR_CHECK(esp_wifi_set_channel(CONFIG_ESPNOW_CHANNEL, WIFI_SECOND_CHAN_NONE));
+
+#if CONFIG_ESPNOW_ENABLE_LONG_RANGE
+    ESP_ERROR_CHECK( esp_wifi_set_protocol(ESPNOW_WIFI_IF, WIFI_PROTOCOL_11B|WIFI_PROTOCOL_11G|WIFI_PROTOCOL_11N|WIFI_PROTOCOL_LR) );
+#endif
+}
 void app_main(void) {
     startTaskMonitor(10000);
+    esp_err_t ret = nvs_flash_init();
+    if (ret == ESP_ERR_NVS_NO_FREE_PAGES || ret == ESP_ERR_NVS_NEW_VERSION_FOUND) {
+        ESP_ERROR_CHECK(nvs_flash_erase());
+        ret = nvs_flash_init();
+    }
+    ESP_ERROR_CHECK(ret);
 
+    example_wifi_init();
+    example_espnow_init();
     if (ESP_OK != init_lcd()) {
         ESP_LOGE(MAIN_LOG_TAG, "LCD init fail");
         while (1);

@@ -26,7 +26,7 @@ esp_err_t init_lcd() {
             .miso_io_num = ST7789_PIN_NUM_MISO,
             .quadwp_io_num = -1,
             .quadhd_io_num = -1,
-            .max_transfer_sz = 240 * 240 * sizeof(uint16_t),
+            .max_transfer_sz = 256 * 256 * sizeof(uint16_t),
     };
     ESP_ERROR_CHECK(spi_bus_initialize(LCD_HOST, &buscfg, SPI_DMA_CH_AUTO));
 
@@ -70,5 +70,7 @@ esp_err_t init_lcd() {
     ESP_LOGI(LCD_LOG_TAG, "Turn on LCD backlight");
     gpio_set_level(ST7789_PIN_NUM_BK_LIGHT, ST7789_LCD_BK_LIGHT_ON_LEVEL);
     esp_lcd_panel_invert_color(lcd_panel_handle, true);
+    esp_lcd_panel_swap_xy(lcd_panel_handle,true);
+    esp_lcd_panel_mirror(lcd_panel_handle,true,false);
     return ESP_OK;
 }
