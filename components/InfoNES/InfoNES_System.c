@@ -1,11 +1,13 @@
 #include <esp_log.h>
+#include <esp_attr.h>
 #include "InfoNES_System.h"
 #include "InfoNES.h"
 #include "string.h"
 #include "stdint.h"
 #include "stdio.h"
 
-extern uint8_t rom[];
+// 1MB psram memory for rom, if we use const for rom, infoNES will crush, still don't know why
+EXT_RAM_ATTR uint8_t rom[1024*1024];
 
 /* Pad state */
 DWORD dwPad1=0;
