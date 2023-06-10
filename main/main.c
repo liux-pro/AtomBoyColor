@@ -18,8 +18,10 @@
 #include "driver/spi_master.h"
 #include "esp_log.h"
 #include "sdkconfig.h"
-#include "InfoNES_System.h"
+#include "InfoNES_C.h"
 #include "InfoNES.h"
+#include "InfoNES_Types.h"
+
 #include "roms/roms.h"
 #include "lcd.h"
 #include "taskMonitor.h"
@@ -43,8 +45,6 @@ TaskHandle_t handle_taskLCD;
 TaskHandle_t handle_taskFlush;
 TaskHandle_t handle_taskSound;
 
-WORD *currentWorkFrame;
-
 
 #define PAD_KEY_A       0
 #define PAD_KEY_B       1
@@ -55,51 +55,19 @@ WORD *currentWorkFrame;
 #define PAD_KEY_LEFT    6
 #define PAD_KEY_RIGHT   7
 
-bool switching_game = true;
 
 _Noreturn void taskLCD(void *param) {
     vTaskDelay(pdMS_TO_TICKS(100));
 
-    {
-        //force jump
-        memcpy(rom, roms_contra_start, roms_contra_end - roms_contra_start);
-        switching_game = false;
-    }
+    memcpy(rom, roms_snow_start, roms_snow_end - roms_snow_start);
 
-    do {
-        switch (dwPad1) {
-            case 1 << PAD_KEY_UP: {
-                memcpy(rom, roms_contra_start, roms_contra_end - roms_contra_start);
-                switching_game = false;
-                break;
-            }
-            case 1 << PAD_KEY_DOWN: {
-                memcpy(rom, roms_mario_start, roms_mario_end - roms_mario_start);
-                switching_game = false;
-                break;
-            }
-            case 1 << PAD_KEY_LEFT: {
-                memcpy(rom, roms_tank_start, roms_tank_end - roms_tank_start);
-                switching_game = false;
-                break;
-            }
-            default: {
-                vTaskDelay(pdMS_TO_TICKS(100));
-                memcpy(frameBuffer, logo, LCD_WIDTH * LCD_HEIGHT * 2);
-                esp_lcd_panel_draw_bitmap(lcd_panel_handle, 0, 0, LCD_WIDTH, LCD_HEIGHT, frameBuffer);
-            }
-        }
+    InfoNES_Load_C();
+    InfoNES_Init_C();
 
-    } while (switching_game);
-
-
-    InfoNES_Load(NULL);
-    InfoNES_Init();
 //    FrameSkip++;
 
     while (1) {
-        InfoNES_Cycle();
-        currentWorkFrame = DoubleFrame[WorkFrameIdx];
+        InfoNES_Cycle_C();
 
         xTaskNotifyGive(handle_taskFlush);
         xTaskNotifyGive(handle_taskSound);
@@ -128,15 +96,13 @@ void taskFlush(void *parm) {
             timeProbe_start(&fps);
         }
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
-        WORD *localWorkFrame = currentWorkFrame;
+        WORD *localWorkFrame = InfoNES_GetScreenBuffer_C();
         for (int y = 0; y < LCD_HEIGHT; ++y) {
             for (int x = 0; x < LCD_WIDTH; ++x) {
                 frameBuffer[x + y * (LCD_WIDTH)] = localWorkFrame[x + y * (NES_DISP_WIDTH) + 8];
             }
         }
-        if (switching_game) {
-            memcpy(frameBuffer, logo, LCD_WIDTH * LCD_HEIGHT * 2);
-        }
+
         esp_lcd_panel_draw_bitmap(lcd_panel_handle, 0, 0, LCD_WIDTH, LCD_HEIGHT, frameBuffer);
 
     }
@@ -151,7 +117,6 @@ void taskFlush(void *parm) {
 #define EXAMPLE_BUFF_SIZE               735  // InfoNES 每次都是给出735个采样点
 #define SAMPLE_RATE                    44100      // InfoNES 定了
 static i2s_chan_handle_t tx_chan;        // I2S tx channel handler
-uint16_t i2s_out_buffer[EXAMPLE_BUFF_SIZE];
 
 
 static void i2s_init(void) {
@@ -189,8 +154,8 @@ void taskSound(void *parm) {
     while (1) {
         ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
         /* Write i2s data */
-        if (i2s_channel_write(tx_chan, i2s_out_buffer, EXAMPLE_BUFF_SIZE * 2, &w_bytes, 1000) == ESP_OK) {
-            printf("Write Task: i2s write %d bytes\n", w_bytes);
+        if (i2s_channel_write(tx_chan, InfoNES_GetSoundBuffer_C(), EXAMPLE_BUFF_SIZE * 2, &w_bytes, 1000) == ESP_OK) {
+//            printf("Write Task: i2s write %d bytes\n", w_bytes);
         } else {
             printf("Write Task: i2s write failed\n");
         }
@@ -244,8 +209,8 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(ret);
 
-    example_wifi_init();
-    example_espnow_init();
+//    example_wifi_init();
+//    example_espnow_init();
     if (ESP_OK != init_lcd()) {
         ESP_LOGE(MAIN_LOG_TAG, "LCD init fail");
         while (1);

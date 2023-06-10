@@ -16,7 +16,7 @@ enum Map1_Size_t
   Map1_1024K
 };
 
-enum Map1_Size_t Map1_Size;
+Map1_Size_t Map1_Size;
 DWORD Map1_256K_base;
 DWORD Map1_swap;
 

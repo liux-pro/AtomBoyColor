@@ -7,7 +7,12 @@
 #include "stdio.h"
 
 // 1MB psram memory for rom, if we use const for rom, infoNES will crush, still don't know why
-EXT_RAM_ATTR uint8_t rom[1024*1024];
+EXT_RAM_BSS_ATTR uint8_t rom[1024*1024];
+
+bool screenIndex = true;
+EXT_RAM_BSS_ATTR WORD nesScreenBuffer[2][NES_DISP_HEIGHT][NES_DISP_WIDTH];
+WORD nesSoundBuffer[2][1024];
+uint16_t nesSoundOffset=0;
 
 /* Pad state */
 DWORD dwPad1=0;
@@ -94,6 +99,8 @@ void InfoNES_ReleaseRom() {
 
 /* Transfer the contents of work frame on the screen */
 void InfoNES_LoadFrame() {
+    screenIndex = !screenIndex;
+    nesSoundOffset=0;
     //没用了
 }
 
@@ -144,13 +151,22 @@ void InfoNES_SoundClose() {
 }
 
 
-extern uint16_t i2s_out_buffer[];
 
 /* Sound Output 5 Waves - 2 Pulse, 1 Triangle, 1 Noise, 1 DPCM */
 void InfoNES_SoundOutput(int samples, BYTE *wave1, BYTE *wave2, BYTE *wave3, BYTE *wave4, BYTE *wave5) {
-    for (int j = 0; j < samples; ++j) {
-        uint8_t temp = (wave1[j] + wave2[j] + wave3[j] + wave4[j] + wave5[j]) / 5;
-        i2s_out_buffer[j] = temp<<2;
+//    ESP_LOGI("i2s  ","%d",samples);
+
+    for (int i = 0; i < samples; ++i) {
+        int w1 = *wave1++;
+        int w2 = *wave2++;
+        int w3 = *wave3++;
+        int w4 = *wave4++;
+        int w5 = *wave5++;
+        //            w3 = w2 = w4 = w5 = 0;
+        int l = w1 * 6 + w2 * 6 + w3 * 5 + w4 * 3 * 17 + w5 * 2 * 32;
+//        int r = w1 * 3 + w2 * 6 + w3 * 5 + w4 * 3 * 17 + w5 * 2 * 32;
+        nesSoundBuffer[screenIndex][nesSoundOffset] = l>>3;
+        nesSoundOffset++;
     }
 }
 
@@ -158,3 +174,17 @@ void InfoNES_SoundOutput(int samples, BYTE *wave1, BYTE *wave2, BYTE *wave3, BYT
 void InfoNES_MessageBox(char *pszMsg, ...) {
     //todo
 };
+
+void InfoNES_PreDrawLine(int line){
+//    printf("pre %d \n",line);
+    InfoNES_SetLineBuffer(nesScreenBuffer[screenIndex][line], NES_DISP_WIDTH);
+
+}
+void InfoNES_PostDrawLine(int line){
+//    printf("post %d \n",line);
+
+}
+int InfoNES_GetSoundBufferSize(){
+//    magic number
+    return 256;
+}

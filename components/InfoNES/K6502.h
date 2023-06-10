@@ -11,7 +11,7 @@
 
 // Type definition
 #ifndef DWORD
-typedef unsigned long  DWORD;
+typedef unsigned long DWORD;
 #endif
 
 #ifndef WORD
@@ -19,7 +19,7 @@ typedef unsigned short WORD;
 #endif
 
 #ifndef BYTE
-typedef unsigned char  BYTE;
+typedef unsigned char BYTE;
 #endif
 
 #ifndef NULL
@@ -37,37 +37,37 @@ typedef unsigned char  BYTE;
 #define FLAG_N 0x80
 
 /* Stack Address */
-#define BASE_STACK   0x100
+#define BASE_STACK 0x100
 
 /* Interrupt Vectors */
-#define VECTOR_NMI   0xfffa
+#define VECTOR_NMI 0xfffa
 #define VECTOR_RESET 0xfffc
-#define VECTOR_IRQ   0xfffe
+#define VECTOR_IRQ 0xfffe
 
 // NMI Request
-#define NMI_REQ  NMI_State = 0;
+#define NMI_REQ NMI_State = 0;
 
 // IRQ Request
-#define IRQ_REQ  IRQ_State = 0;
+#define IRQ_REQ IRQ_State = 0;
 
 // Emulator Operation
 void K6502_Init();
 void K6502_Reset();
-void K6502_Set_Int_Wiring( BYTE byNMI_Wiring, BYTE byIRQ_Wiring );
-void K6502_Step( WORD wClocks ); // remove register key word according to modern c++ stander
+void K6502_Set_Int_Wiring(BYTE byNMI_Wiring, BYTE byIRQ_Wiring);
+void K6502_Step(int wClocks);
 
 // I/O Operation (User definition)
-static inline BYTE K6502_Read( WORD wAddr);
-static inline WORD K6502_ReadW( WORD wAddr );
-static inline WORD K6502_ReadW2( WORD wAddr );
-static inline BYTE K6502_ReadZp( BYTE byAddr );
-static inline WORD K6502_ReadZpW( BYTE byAddr );
+static inline BYTE K6502_Read(WORD wAddr);
+static inline WORD K6502_ReadW(WORD wAddr);
+static inline WORD K6502_ReadW2(WORD wAddr);
+static inline BYTE K6502_ReadZp(BYTE byAddr);
+static inline WORD K6502_ReadZpW(BYTE byAddr);
 static inline BYTE K6502_ReadAbsX();
 static inline BYTE K6502_ReadAbsY();
 static inline BYTE K6502_ReadIY();
 
-static inline void K6502_Write( WORD wAddr, BYTE byData );
-static inline void K6502_WriteW( WORD wAddr, WORD wData );
+static inline void K6502_Write(WORD wAddr, BYTE byData);
+static inline void K6502_WriteW(WORD wAddr, WORD wData);
 
 // The state of the IRQ pin
 extern BYTE IRQ_State;
@@ -75,7 +75,10 @@ extern BYTE IRQ_State;
 // The state of the NMI pin
 extern BYTE NMI_State;
 
+extern WORD PC;
+
 // The number of the clocks that it passed
-extern WORD g_wPassedClocks;
+//extern WORD g_wPassedClocks;
+WORD getPassedClocks();
 
 #endif /* !K6502_H_INCLUDED */
