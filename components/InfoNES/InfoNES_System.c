@@ -144,9 +144,14 @@ void InfoNES_SoundClose() {
 }
 
 
+extern uint16_t i2s_out_buffer[];
+
 /* Sound Output 5 Waves - 2 Pulse, 1 Triangle, 1 Noise, 1 DPCM */
 void InfoNES_SoundOutput(int samples, BYTE *wave1, BYTE *wave2, BYTE *wave3, BYTE *wave4, BYTE *wave5) {
-//    ESP_LOGI("sound", "fps: %d", samples);
+    for (int j = 0; j < samples; ++j) {
+        uint8_t temp = (wave1[j] + wave2[j] + wave3[j] + wave4[j] + wave5[j]) / 5;
+        i2s_out_buffer[j] = temp<<2;
+    }
 }
 
 /* Print system message */

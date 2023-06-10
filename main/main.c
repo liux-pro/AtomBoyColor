@@ -10,6 +10,8 @@
 #include <esp_netif.h>
 #include <esp_event.h>
 #include <esp_wifi.h>
+#include <driver/i2s_common.h>
+#include <driver/i2s_std.h>
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 #include "driver/gpio.h"
@@ -39,6 +41,7 @@ extern DWORD dwPad2;
 timeProbe_t fps;
 TaskHandle_t handle_taskLCD;
 TaskHandle_t handle_taskFlush;
+TaskHandle_t handle_taskSound;
 
 WORD *currentWorkFrame;
 
@@ -56,6 +59,12 @@ bool switching_game = true;
 
 _Noreturn void taskLCD(void *param) {
     vTaskDelay(pdMS_TO_TICKS(100));
+
+    {
+        //force jump
+        memcpy(rom, roms_contra_start, roms_contra_end - roms_contra_start);
+        switching_game = false;
+    }
 
     do {
         switch (dwPad1) {
@@ -93,6 +102,7 @@ _Noreturn void taskLCD(void *param) {
         currentWorkFrame = DoubleFrame[WorkFrameIdx];
 
         xTaskNotifyGive(handle_taskFlush);
+        xTaskNotifyGive(handle_taskSound);
     }
 }
 
@@ -133,12 +143,72 @@ void taskFlush(void *parm) {
 
 }
 
+
+#define I2S_BCLK        GPIO_NUM_1      // I2S bit clock io number
+#define I2S_LRC         GPIO_NUM_3      // I2S word select io number
+#define I2S_DOUT        GPIO_NUM_2     // I2S data out io number
+#define I2S_DIN         GPIO_NUM_NC    // I2S data in io number
+#define EXAMPLE_BUFF_SIZE               735  // InfoNES 每次都是给出735个采样点
+#define SAMPLE_RATE                    44100      // InfoNES 定了
+static i2s_chan_handle_t tx_chan;        // I2S tx channel handler
+uint16_t i2s_out_buffer[EXAMPLE_BUFF_SIZE];
+
+
+static void i2s_init(void) {
+    i2s_chan_config_t tx_chan_cfg = I2S_CHANNEL_DEFAULT_CONFIG(I2S_NUM_AUTO, I2S_ROLE_MASTER);
+    ESP_ERROR_CHECK(i2s_new_channel(&tx_chan_cfg, &tx_chan, NULL));
+
+
+    i2s_std_config_t tx_std_cfg = {
+            .clk_cfg  = I2S_STD_CLK_DEFAULT_CONFIG(SAMPLE_RATE),
+            .slot_cfg = I2S_STD_MSB_SLOT_DEFAULT_CONFIG(I2S_DATA_BIT_WIDTH_16BIT,
+                                                        I2S_SLOT_MODE_MONO),
+
+            .gpio_cfg = {
+                    .mclk = I2S_GPIO_UNUSED,    // some codecs may require mclk signal, this example doesn't need it
+                    .bclk = I2S_BCLK,
+                    .ws   = I2S_LRC,
+                    .dout = I2S_DOUT,
+                    .din  = I2S_DIN,
+                    .invert_flags = {
+                            .mclk_inv = false,
+                            .bclk_inv = false,
+                            .ws_inv   = false,
+                    },
+            },
+    };
+    ESP_ERROR_CHECK(i2s_channel_init_std_mode(tx_chan, &tx_std_cfg));
+}
+
+
+void taskSound(void *parm) {
+    i2s_init();
+    ESP_ERROR_CHECK(i2s_channel_enable(tx_chan));
+
+    size_t w_bytes = 0;
+    while (1) {
+        ulTaskNotifyTake(pdTRUE, portMAX_DELAY);
+        /* Write i2s data */
+        if (i2s_channel_write(tx_chan, i2s_out_buffer, EXAMPLE_BUFF_SIZE * 2, &w_bytes, 1000) == ESP_OK) {
+            printf("Write Task: i2s write %d bytes\n", w_bytes);
+        } else {
+            printf("Write Task: i2s write failed\n");
+        }
+    }
+
+
+    ESP_ERROR_CHECK(i2s_channel_disable(tx_chan));
+    vTaskDelete(NULL);
+
+
+}
+
 static void example_espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
     dwPad1 = *((uint8_t *) (data) + 0);
-    if (dwPad1==0){
-        gpio_set_level(GPIO_NUM_10,0);
-    } else{
-        gpio_set_level(GPIO_NUM_10,1);
+    if (dwPad1 == 0) {
+        gpio_set_level(GPIO_NUM_10, 0);
+    } else {
+        gpio_set_level(GPIO_NUM_10, 1);
     }
 }
 
@@ -192,5 +262,6 @@ void app_main(void) {
     setOutput(GPIO_NUM_10);
 
     xTaskCreatePinnedToCore(taskFlush, "taskFlush", 4 * 1024, NULL, 5, &handle_taskFlush, 1);
+    xTaskCreatePinnedToCore(taskSound, "taskSound", 4 * 1024, NULL, 5, &handle_taskSound, 1);
     xTaskCreatePinnedToCore(taskLCD, "taskLCD", 4 * 1024, NULL, 5, &handle_taskLCD, 0);
 }
