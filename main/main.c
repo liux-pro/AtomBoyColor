@@ -31,7 +31,7 @@
 
 extern EXT_RAM_BSS_ATTR uint8_t rom[];
 extern const uint8_t logo[];
-uint16_t frameBuffer[240 * 240];
+EXT_RAM_BSS_ATTR uint16_t frameBuffer[240 * 240];
 
 extern DWORD dwPad1;
 extern DWORD dwPad2;
@@ -41,7 +41,7 @@ extern DWORD dwPad2;
 #define CONFIG_ESPNOW_CHANNEL  10
 
 timeProbe_t fps;
-TaskHandle_t handle_taskLCD;
+TaskHandle_t handle_taskInfoNES;
 TaskHandle_t handle_taskFlush;
 TaskHandle_t handle_taskSound;
 
@@ -56,7 +56,7 @@ TaskHandle_t handle_taskSound;
 #define PAD_KEY_RIGHT   7
 
 
-_Noreturn void taskLCD(void *param) {
+_Noreturn void taskInfoNES(void *param) {
     vTaskDelay(pdMS_TO_TICKS(100));
 
     memcpy(rom, roms_snow_start, roms_snow_end - roms_snow_start);
@@ -65,8 +65,17 @@ _Noreturn void taskLCD(void *param) {
     InfoNES_Init_C();
 
 //    FrameSkip++;
+    int64_t lastFrameTime = 0;
 
     while (1) {
+        int64_t current = esp_timer_get_time();
+        int64_t shouldFlushTime = lastFrameTime + (1000 * 1000 / 60);
+        if (shouldFlushTime > current) {
+            vTaskDelay(pdMS_TO_TICKS((shouldFlushTime - current) >> 10));
+            lastFrameTime = shouldFlushTime;
+        } else {
+            lastFrameTime=current;
+        }
         InfoNES_Cycle_C();
 
         xTaskNotifyGive(handle_taskFlush);
@@ -211,6 +220,7 @@ void app_main(void) {
 
 //    example_wifi_init();
 //    example_espnow_init();
+
     if (ESP_OK != init_lcd()) {
         ESP_LOGE(MAIN_LOG_TAG, "LCD init fail");
         while (1);
@@ -228,5 +238,5 @@ void app_main(void) {
 
     xTaskCreatePinnedToCore(taskFlush, "taskFlush", 4 * 1024, NULL, 5, &handle_taskFlush, 1);
     xTaskCreatePinnedToCore(taskSound, "taskSound", 4 * 1024, NULL, 5, &handle_taskSound, 1);
-    xTaskCreatePinnedToCore(taskLCD, "taskLCD", 4 * 1024, NULL, 5, &handle_taskLCD, 0);
+    xTaskCreatePinnedToCore(taskInfoNES, "taskInfoNES", 4 * 1024, NULL, 5, &handle_taskInfoNES, 0);
 }

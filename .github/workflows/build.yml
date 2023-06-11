@@ -13,7 +13,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
       - name: build artifact
-        run: docker run --rm -v $PWD:/project -w /project espressif/idf:release-v5.0 bash -c "idf.py merge"
+        run: docker run --rm -v $PWD:/project -w /project espressif/idf:release-v5.0.2 bash -c "idf.py merge"
       - name: Upload Artifact
         uses: actions/upload-artifact@v3
         with:

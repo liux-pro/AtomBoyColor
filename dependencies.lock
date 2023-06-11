@@ -3,7 +3,7 @@ dependencies:
     component_hash: null
     source:
       type: idf
-    version: 5.0.0
+    version: 5.0.2
   liux-pro/merge:
     component_hash: 157a7a1a24aa135836c6571110436622cadd11758aa76d7dac511a8719434961
     source:

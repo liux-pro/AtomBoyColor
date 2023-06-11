@@ -11,7 +11,7 @@ EXT_RAM_BSS_ATTR uint8_t rom[1024*1024];
 
 bool screenIndex = true;
 EXT_RAM_BSS_ATTR WORD nesScreenBuffer[2][NES_DISP_HEIGHT][NES_DISP_WIDTH];
-WORD nesSoundBuffer[2][1024];
+EXT_RAM_BSS_ATTR WORD nesSoundBuffer[2][1024];
 uint16_t nesSoundOffset=0;
 
 /* Pad state */
