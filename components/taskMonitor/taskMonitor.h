@@ -104,6 +104,10 @@ static esp_err_t print_real_time_stats(TickType_t xTicksToWait) {
     exit:    //Common return path
     free(start_array);
     free(end_array);
+    printf("MALLOC_CAP_INTERNAL  %d\n",heap_caps_get_free_size(MALLOC_CAP_INTERNAL));
+    printf("MALLOC_CAP_DEFAULT  %d\n",heap_caps_get_free_size(MALLOC_CAP_DEFAULT));
+    printf("MALLOC_CAP_SPIRAM  %d\n",heap_caps_get_free_size(MALLOC_CAP_SPIRAM));
+    printf("MALLOC_CAP_DMA  %d\n",heap_caps_get_free_size(MALLOC_CAP_DMA));
     return ret;
 }
 

@@ -177,7 +177,7 @@ void taskSound(void *parm) {
 
 }
 
-static void example_espnow_recv_cb(const uint8_t *mac_addr, const uint8_t *data, int data_len) {
+static void example_espnow_recv_cb(const esp_now_recv_info_t * esp_now_info, const uint8_t *data, int data_len) {
     dwPad1 = *((uint8_t *) (data) + 0);
     if (dwPad1 == 0) {
         gpio_set_level(GPIO_NUM_10, 0);
@@ -218,8 +218,8 @@ void app_main(void) {
     }
     ESP_ERROR_CHECK(ret);
 
-//    example_wifi_init();
-//    example_espnow_init();
+    example_wifi_init();
+    example_espnow_init();
 
     if (ESP_OK != init_lcd()) {
         ESP_LOGE(MAIN_LOG_TAG, "LCD init fail");
@@ -236,7 +236,7 @@ void app_main(void) {
 
     setOutput(GPIO_NUM_10);
 
-    xTaskCreatePinnedToCore(taskFlush, "taskFlush", 4 * 1024, NULL, 5, &handle_taskFlush, 1);
-    xTaskCreatePinnedToCore(taskSound, "taskSound", 4 * 1024, NULL, 5, &handle_taskSound, 1);
-    xTaskCreatePinnedToCore(taskInfoNES, "taskInfoNES", 4 * 1024, NULL, 5, &handle_taskInfoNES, 0);
+    xTaskCreatePinnedToCore(taskFlush, "taskFlush", 4 * 1024, NULL, 5, &handle_taskFlush, 0);
+    xTaskCreatePinnedToCore(taskSound, "taskSound", 4 * 1024, NULL, 5, &handle_taskSound, 0);
+    xTaskCreatePinnedToCore(taskInfoNES, "taskInfoNES", 4 * 1024, NULL, 5, &handle_taskInfoNES, 1);
 }

@@ -43,6 +43,7 @@
 #include <assert.h>
 #include <pico.h>
 #include <tuple>
+#include "esp_attr.h"
 //标记生成完成一帧，退出循环
 bool frame_ready = false;
 //#include <util/work_meter.h>
@@ -65,10 +66,10 @@ enum
 /*-------------------------------------------------------------------*/
 
 /* RAM */
-BYTE RAM[RAM_SIZE];
+EXT_RAM_BSS_ATTR BYTE RAM[RAM_SIZE];
 
 /* SRAM */
-BYTE SRAM[SRAM_SIZE];
+EXT_RAM_BSS_ATTR BYTE SRAM[SRAM_SIZE];
 bool SRAMwritten = false;
 
 /* ROM */
@@ -89,7 +90,7 @@ BYTE *ROMBANK[4];
 /*-------------------------------------------------------------------*/
 
 /* PPU RAM */
-BYTE PPURAM[PPURAM_SIZE];
+EXT_RAM_BSS_ATTR BYTE PPURAM[PPURAM_SIZE];
 
 /* VROM */
 BYTE *VROM;
@@ -190,7 +191,7 @@ void __not_in_flash_func(InfoNES_SetLineBuffer)(WORD *p, WORD size)
 #endif
 
 /* Character Buffer */
-BYTE ChrBuf[256 * 2 * 8 * 8];
+EXT_RAM_BSS_ATTR BYTE ChrBuf[256 * 2 * 8 * 8];
 
 /* Update flag for ChrBuf */
 BYTE ChrBufUpdate;

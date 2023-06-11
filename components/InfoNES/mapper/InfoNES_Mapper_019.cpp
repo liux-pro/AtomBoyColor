@@ -4,7 +4,7 @@
 /*                                                                   */
 /*===================================================================*/
 
-BYTE Map19_Chr_Ram[0x2000];
+EXT_RAM_BSS_ATTR BYTE Map19_Chr_Ram[0x2000];
 BYTE Map19_Regs[2];
 
 BYTE Map19_IRQ_Enable;
