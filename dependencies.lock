@@ -3,13 +3,13 @@ dependencies:
     component_hash: null
     source:
       type: idf
-    version: 5.1.0
+    version: 5.1.2
   liux-pro/merge:
     component_hash: 157a7a1a24aa135836c6571110436622cadd11758aa76d7dac511a8719434961
     source:
       service_url: https://api.components.espressif.com/
       type: service
     version: 0.0.2
-manifest_hash: cb5c2be374832ef2be1b27d162ebd3c52a025ef286b784ea6811b3ae9ddd1f52
+manifest_hash: 1396055fa085e872a3dfd4bf80f866fc072f316b2c3705746b540761deb14b40
 target: esp32s3
 version: 1.0.0
